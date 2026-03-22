@@ -34,7 +34,13 @@ Network Capture Inspector is a Chrome extension for capturing and reviewing netw
 npm install
 ```
 
-3. Create the production build:
+3. Install Git hooks:
+
+```bash
+npm run prepare
+```
+
+4. Create the production build:
 
 ```bash
 npm run build
@@ -94,10 +100,37 @@ Use the following commands during development:
 
 ```bash
 npm install
+npm run prepare
+npm run lint
+npm run format:check
 npm run build
 ```
 
 If you make code changes, rebuild the project and then reload the extension from the Chrome extensions page.
+
+## Formatting, Linting, and Pre-commit Hook
+
+The project is configured with:
+
+- `Prettier` for code and documentation formatting
+- `ESLint` for code quality checks
+- `Husky` for Git hook management
+- `lint-staged` to run checks only on staged files during commit
+
+Available commands:
+
+```bash
+npm run lint
+npm run lint:fix
+npm run format
+npm run format:check
+```
+
+On commit, the pre-commit hook runs `lint-staged`, which:
+
+- formats staged source and documentation files with Prettier
+- runs ESLint with `--fix` on staged JavaScript and TypeScript files
+- blocks the commit if linting still fails
 
 ## Documentation
 
