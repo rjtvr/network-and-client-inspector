@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Network Capture Inspector",
+  "description": "Inspect network requests from the active tab.",
+  "version": "0.4.0",
+  "action": {
+    "default_title": "Network Capture",
+    "default_popup": "popup.html"
+  },
+  "background": {
+    "service_worker": "background/service-worker.js",
+    "type": "module"
+  },
+  "permissions": ["webRequest", "tabs", "storage"],
+  "host_permissions": ["http://*/*", "https://*/*"]
+}
+
