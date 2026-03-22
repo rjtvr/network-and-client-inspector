@@ -1,5 +1,5 @@
 {
-  "name": "chrome-network-capture-extension",
+  "name": "network-capture-inspector",
   "version": "0.4.0",
   "private": true,
   "type": "module",
@@ -24,5 +24,3 @@
     "vite": "^7.0.0"
   }
 }
-
-

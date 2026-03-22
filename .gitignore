@@ -3,6 +3,6 @@ dist/
 *.log
 .DS_Store
 Thumbs.db
-AGENTS.md
-PLAN.md
-tasks/
+docs/AGENTS.md
+docs/PLAN.md
+docs/tasks/
