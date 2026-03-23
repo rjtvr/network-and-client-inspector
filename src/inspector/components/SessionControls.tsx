@@ -5,6 +5,8 @@ interface SessionControlsProps {
   onPauseResume: () => void;
   onClear: () => void;
   onExport: () => void;
+  removeAccessDisabled?: boolean;
+  onRemoveAccess?: () => void;
 }
 
 export function SessionControls({
@@ -13,7 +15,9 @@ export function SessionControls({
   hasRequests,
   onPauseResume,
   onClear,
-  onExport
+  onExport,
+  removeAccessDisabled = false,
+  onRemoveAccess
 }: SessionControlsProps) {
   const pauseResumeLabel = captureState === "paused" ? "Resume Capture" : "Pause Capture";
   const pauseResumeDisabled = captureState !== "capturing" && captureState !== "paused";
@@ -56,6 +60,20 @@ export function SessionControls({
       >
         Export JSON
       </button>
+      {onRemoveAccess ? (
+        <button
+          type="button"
+          disabled={isBusy || removeAccessDisabled}
+          onClick={onRemoveAccess}
+          className={`rounded-2xl px-4 py-3 text-sm font-semibold transition ${
+            isBusy || removeAccessDisabled
+              ? "cursor-not-allowed bg-zinc-200 text-zinc-500"
+              : "border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100"
+          }`}
+        >
+          Remove Site Access
+        </button>
+      ) : null}
     </section>
   );
 }

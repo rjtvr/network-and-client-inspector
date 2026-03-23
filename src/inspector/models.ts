@@ -48,6 +48,8 @@ export interface PerformanceSummary {
   durationBuckets: Array<{ label: string; count: number }>;
 }
 
+export type ExportClientContext = Omit<ClientContext, "installationId" | "tabInstanceId">;
+
 function getNavigatorValue<T>(factory: () => T | undefined): T | null {
   try {
     const value = factory();
@@ -243,6 +245,15 @@ export function formatClientValue(value: unknown) {
   }
 
   return String(value);
+}
+
+export function sanitizeExportClientContext(clientContext: ClientContext | null): ExportClientContext | null {
+  if (!clientContext) {
+    return null;
+  }
+
+  const { installationId: _installationId, tabInstanceId: _tabInstanceId, ...safeContext } = clientContext;
+  return safeContext;
 }
 
 export type { ClientContext };

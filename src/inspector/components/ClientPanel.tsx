@@ -105,7 +105,8 @@ export function ClientPanel({ clientContext }: ClientPanelProps) {
           <div>
             <h2 className="text-lg font-semibold">Client Details</h2>
             <p className="mt-2 text-sm leading-6 text-slate">
-              Background-owned browser and tab metadata with runtime-only client signals from the inspector.
+              Browser, device, network, tab, and page context for this inspected session. Internal identifiers stay out
+              of the main UI and are excluded from export.
             </p>
           </div>
           <span className="rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em] text-slate">
@@ -113,12 +114,19 @@ export function ClientPanel({ clientContext }: ClientPanelProps) {
           </span>
         </div>
 
-        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-          <IdentityCard label="Installation ID" value={clientContext.installationId} />
-          <IdentityCard label="Tab Instance ID" value={clientContext.tabInstanceId} />
+        <div className="mt-5 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <IdentityCard label="Tab ID" value={String(clientContext.tabId)} />
           <IdentityCard label="Window ID" value={formatClientValue(clientContext.windowId)} />
-          <IdentityCard label="Incognito" value={clientContext.incognitoStatus === "unavailable" ? "Unavailable" : clientContext.incognitoStatus === "yes" ? "Yes" : "No"} />
+          <IdentityCard
+            label="Incognito"
+            value={
+              clientContext.incognitoStatus === "unavailable"
+                ? "Unavailable"
+                : clientContext.incognitoStatus === "yes"
+                  ? "Yes"
+                  : "No"
+            }
+          />
         </div>
       </div>
 

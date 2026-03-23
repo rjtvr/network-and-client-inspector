@@ -5,8 +5,10 @@ import {
   getSessionState,
   pauseCapture,
   resumeCapture,
+  stopCapture,
   updateClientRuntimeSnapshot
 } from "../shared/messaging";
+import { getSiteAccessStateForTabId, removeSiteAccessForTab, type SiteAccessState } from "../shared/site-access";
 import { ClientPanel } from "./components/ClientPanel";
 import { DetailPanel } from "./components/DetailPanel";
 import { InspectorTabs } from "./components/InspectorTabs";
@@ -20,6 +22,7 @@ import {
   getInitialTabId,
   matchesStatusFilter,
   resolveInspectorTabId,
+  sanitizeExportClientContext,
   toInspectorRequest,
   type ClientContext,
   type InspectorFilters,
@@ -41,9 +44,11 @@ export function Inspector() {
   const [tabId, setTabId] = useState<number | null>(getInitialTabId());
   const [requests, setRequests] = useState<InspectorRequest[]>([]);
   const [clientContext, setClientContext] = useState<ClientContext | null>(null);
+  const [siteAccess, setSiteAccess] = useState<SiteAccessState | null>(null);
   const [captureState, setCaptureState] = useState("idle");
   const [selectedRequestId, setSelectedRequestId] = useState("");
   const [isBusy, setIsBusy] = useState(false);
+  const [accessNotice, setAccessNotice] = useState<string | null>(null);
 
   const deferredRequests = useDeferredValue(requests);
   const deferredSearchValue = useDeferredValue(searchValue);
@@ -62,9 +67,11 @@ export function Inspector() {
 
       if (resolvedTabId === null) {
         setTabId(null);
+        setAccessNotice(null);
         startTransition(() => {
           setRequests([]);
           setClientContext(null);
+          setSiteAccess(null);
           setCaptureState("idle");
         });
         return;
@@ -72,11 +79,13 @@ export function Inspector() {
 
       if (resolvedTabId !== tabId) {
         setTabId(resolvedTabId);
+        setAccessNotice(null);
       }
 
-      const [sessionResponse, clientContextResponse] = await Promise.all([
+      const [sessionResponse, clientContextResponse, siteAccessResponse] = await Promise.all([
         getSessionState(resolvedTabId),
-        getClientContext(resolvedTabId)
+        getClientContext(resolvedTabId),
+        getSiteAccessStateForTabId(resolvedTabId)
       ]);
 
       if (!isMounted) {
@@ -87,6 +96,7 @@ export function Inspector() {
         setCaptureState(sessionResponse.session.state);
         setRequests(sessionResponse.session.requests.map(toInspectorRequest));
         setClientContext(clientContextResponse.clientContext);
+        setSiteAccess(siteAccessResponse);
       });
     }
 
@@ -236,7 +246,7 @@ export function Inspector() {
       tabId,
       captureState,
       exportedAt: new Date().toISOString(),
-      clientContext,
+      clientContext: sanitizeExportClientContext(clientContext),
       requests
     };
 
@@ -263,6 +273,44 @@ export function Inspector() {
     }
   }
 
+  async function handleRemoveSiteAccess() {
+    if (tabId === null) {
+      return;
+    }
+
+    setIsBusy(true);
+    setAccessNotice(null);
+
+    try {
+      if (captureState !== "idle") {
+        const response = await stopCapture(tabId);
+        startTransition(() => {
+          setCaptureState(response.session.state);
+          setRequests(response.session.requests.map(toInspectorRequest));
+        });
+      }
+
+      const result = await removeSiteAccessForTab(tabId);
+      setSiteAccess(result.state);
+      setAccessNotice(result.message);
+    } finally {
+      setIsBusy(false);
+    }
+  }
+
+  const siteAccessLabel =
+    siteAccess?.status === "granted"
+      ? "Site access granted"
+      : siteAccess?.status === "needs-access"
+        ? "Site access required"
+        : "Unsupported page";
+  const siteAccessTone =
+    siteAccess?.status === "granted"
+      ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+      : siteAccess?.status === "needs-access"
+        ? "border-amber-200 bg-amber-50 text-amber-700"
+        : "border-zinc-200 bg-zinc-100 text-slate";
+
   return (
     <main className="min-h-screen bg-[radial-gradient(circle_at_top,#ccfbf1,transparent_30%),linear-gradient(180deg,#f8fafc_0%,#eef2f6_100%)] px-4 py-6 text-ink md:px-6 md:py-8">
       <div className="mx-auto max-w-7xl">
@@ -281,10 +329,34 @@ export function Inspector() {
                 : activeView === "performance"
                   ? `${requests.length} captured requests available for timing analysis`
                   : activeView === "client"
-                    ? `${clientContext?.tabInstanceId ?? "No client context yet"}`
+                    ? clientContext
+                      ? "Client context available for this session"
+                      : "No client context yet"
                     : `Showing ${filteredRequests.length} of ${requests.length} requests`}
             </div>
           </div>
+          <section className="mt-4 rounded-[24px] border border-zinc-200 bg-zinc-50/85 p-4">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate">Privacy & Access</p>
+                <p className="mt-2 text-sm text-ink">{siteAccess?.hostname ?? "Unavailable"}</p>
+              </div>
+              <span
+                className={`rounded-full border px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.16em] ${siteAccessTone}`}
+              >
+                {siteAccessLabel}
+              </span>
+            </div>
+            <p className="mt-3 text-sm leading-6 text-slate">
+              {accessNotice ??
+                siteAccess?.message ??
+                "Request URLs and request bodies are only captured after you grant site access and start capture."}
+            </p>
+            <p className="mt-2 text-sm leading-6 text-slate">
+              Captured data stays local in Chrome unless you export it. Exported files may contain sensitive request or
+              tab information.
+            </p>
+          </section>
           <InspectorTabs
             activeTab={activeView}
             requestCount={requests.length}
@@ -298,6 +370,8 @@ export function Inspector() {
             onPauseResume={handlePauseResume}
             onClear={handleClear}
             onExport={handleExport}
+            removeAccessDisabled={siteAccess?.status !== "granted"}
+            onRemoveAccess={handleRemoveSiteAccess}
           />
         </header>
 
